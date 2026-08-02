@@ -1,0 +1,288 @@
+# 🪶 Pluma — Texto editable incrustable
+
+Sistema completo para mostrar **texto editable en webs de terceros**: un **widget** en vanilla JS que cualquier persona puede pegar en su web, una **API** con Serverless Functions y un **panel de administración** con diseño oscuro en tonos morados, magentas y azules. Todo se despliega en **Vercel**.
+
+---
+
+## Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Vercel (Next.js)                      │
+│                                                              │
+│  ┌──────────────────┐   ┌─────────────────────────────┐     │
+│  │  /public/widget.js│──▶│  GET /api/texto/:id  (público)│     │
+│  │  (snippet estático)│   │  CORS abierto *             │     │
+│  └──────────────────┘   └─────────────────────────────┘     │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Panel /  (UI React)                                    │  │
+│  │   · login (ADMIN_PASSWORD)                              │  │
+│  │   · lista + crear + editar en vivo + preview            │  │
+│  │   · botón "Copiar código embed"                        │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                       │  (rutas protegidas)                  │
+│  ┌────────────────────▼───────────────────────────────┐     │
+│  │  POST/PUT/DELETE /api/texto…   GET /api/textos      │     │
+│  └─────────────────────────────────────────────────────┘     │
+│                       │                                      │
+│  ┌────────────────────▼───────────────────────────────┐     │
+│  │  Vercel Postgres  (o  Vercel KV / Redis)            │     │
+│  └─────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+        ▲
+        │  <div data-widget-id="…"></div>
+        │  <script src="https://TU-PROYECTO.vercel.app/widget.js">
+   Cualquier web (React, WordPress, HTML estático…)
+```
+
+## Demo
+
+Incluye una página de demostración en `/demo`: simula una web de terceros con widgets incrustados mediante el snippet real.
+
+- **Local:** `http://localhost:3000/demo`
+- **Producción:** `https://TU-PROYECTO.vercel.app/demo`
+
+---
+
+## Requisitos previos
+
+- Cuenta en [vercel.com](https://vercel.com)
+- Node.js ≥ 18.18
+- Un repositorio de GitHub (opcional pero recomendado para deploy automático)
+
+---
+
+## Configuración local
+
+```bash
+# 1. Clonar / copiar el proyecto y entrar
+cd pluma
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Crear variables de entorno
+cp .env.example .env.local
+```
+
+Edita `.env.local` y configura la base de datos (elige **una** opción):
+
+```dotenv
+# Opción A: Vercel Postgres
+POSTGRES_URL="postgres://..."
+
+# Opción B: Vercel KV / Redis
+KV_URL="redis://..."
+KV_REST_API_URL="https://..."
+KV_REST_API_TOKEN="..."
+KV_REST_API_READ_ONLY_TOKEN="..."
+
+# Contraseña maestra del panel
+ADMIN_PASSWORD="tu-contrasena-segura"
+```
+
+### Crear la base de datos
+
+**Opción A — Vercel Postgres (recomendada):**
+
+1. En el dashboard de Vercel abre tu proyecto → **Storage** → **Create Database** → **Postgres**.
+2. Copia los valores de conexión en `.env.local` (`POSTGRES_URL`).
+3. Crea la tabla ejecutando:
+
+```bash
+npm run db:setup
+```
+
+El esquema también está en [`db/schema.sql`](db/schema.sql) por si prefieres aplicarlo a mano:
+
+```bash
+psql "$POSTGRES_URL" -f db/schema.sql
+```
+
+> Con **Vercel KV/Redis no necesitas tablas**: el sistema lo guarda todo como claves JSON. Basta con poner `KV_URL` (o los valores REST) en las variables de entorno.
+
+### Arrancar el servidor
+
+```bash
+npm run dev
+```
+
+- Panel: `http://localhost:3000`
+- Demo: `http://localhost:3000/demo`
+- Widget: `http://localhost:3000/widget.js`
+
+---
+
+## Deploy en Vercel (con GitHub + deploy automático)
+
+1. Sube el proyecto a un repositorio de GitHub:
+
+```bash
+git init
+git add .
+git commit -m "feat: sistema de texto editable incrustable (Pluma)"
+git branch -M main
+git remote add origin https://github.com/TU-USUARIO/pluma.git
+git push -u origin main
+```
+
+2. Ve a [vercel.com/new](https://vercel.com/new), elige **Import** tu repositorio de GitHub.
+3. Vercel detecta Next.js automáticamente (build: `npm run build`).
+4. Añade las variables de entorno en **Settings → Environment Variables** (las mismas que en `.env.local`): `POSTGRES_URL` (o `KV_URL` + tokens REST) y `ADMIN_PASSWORD`.
+5. **Deploy.** Cada `git push` a `main` generará un deploy automático.
+6. Crea la tabla en Postgres de producción (si usas Postgres):
+
+```bash
+npm run db:setup
+```
+
+> Con KV no hace falta nada más.
+
+---
+
+## Variables de entorno
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `POSTGRES_URL` | Con Postgres | Cadena de conexión de Vercel Postgres. Si está presente, se usa Postgres. |
+| `KV_URL` | Con KV | URL de Vercel KV / Redis. Se usa si no hay `POSTGRES_URL`. |
+| `KV_REST_API_URL` | Con KV | Endpoint REST (requerido por @vercel/kv en runtime). |
+| `KV_REST_API_TOKEN` | Con KV | Token de escritura del almacén. |
+| `KV_REST_API_READ_ONLY_TOKEN` | Con KV | Token de solo lectura. |
+| `ADMIN_PASSWORD` | Sí | Contraseña maestra para editar/borrar widgets. Alias aceptado: `PASSWORD_MAESTRA`. |
+
+---
+
+## Cómo usar el widget en una web de terceros
+
+Desde el panel pulsa **Copiar código embed**. El snippet generado se ve así:
+
+```html
+<div data-widget-id="mi-texto-1" data-widget-color="#7c3aed" data-widget-size="24px"></div>
+<script src="https://TU-PROYECTO.vercel.app/widget.js"></script>
+```
+
+El widget busca todos los `[data-widget-id]` de la página, consulta la API y pinta el texto
+con los estilos guardados. **No usa dependencias** y funciona en React, WordPress, HTML estático, etc.
+
+### Atributos por elemento
+
+| Atributo | Descripción |
+|---|---|
+| `data-widget-id` | (obligatorio) ID del widget guardado en la API. |
+| `data-widget-color` | Color del texto (hex). Tiene prioridad sobre el guardado. |
+| `data-widget-size` | Tamaño del texto (ej. `24px`). |
+| `data-widget-font` | Fuente CSS (ej. `Georgia, serif`). |
+| `data-widget-align` | Alineación: `left`, `center`, `right`, `justify`. |
+| `data-widget-text` | Texto de respaldo si el API no está disponible. |
+
+### Atributo opcional en la etiqueta `<script>`
+
+Por defecto el widget deduce la URL del API desde su propio `src`. Si lo necesitas, indícalo a mano:
+
+```html
+<script
+  src="https://TU-PROYECTO.vercel.app/widget.js"
+  data-pluma-api="https://TU-PROYECTO.vercel.app"
+></script>
+```
+
+### API pública de JavaScript
+
+```js
+// Recarga todos los widgets de la página (útil en SPAs):
+window.PlumaWidgets.refresh();
+```
+
+---
+
+## Endpoints del API
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `GET` | `/api/texto/:id` | **Público** (CORS abierto) | Devuelve el texto y configuración del widget. Usado por `widget.js`. |
+| `POST` | `/api/texto` | Protegido | Crea un widget nuevo. |
+| `PUT` | `/api/texto/:id` | Protegido | Actualiza el texto/configuración. |
+| `DELETE` | `/api/texto/:id` | Protegido | Elimina el widget. |
+| `GET` | `/api/textos` | Protegido | Lista todos los widgets (para el panel). |
+| `POST` | `/api/login` | Público | Login con contraseña maestra → devuelve token `Bearer`. |
+
+**Respuesta de ejemplo** (`GET /api/texto/mi-texto-1`):
+
+```json
+{
+  "ok": true,
+  "widget": {
+    "id": "mi-texto-1",
+    "texto": "¡Hola desde Pluma!",
+    "color": "#7c3aed",
+    "font_size": "24px",
+    "fuente": "sans-serif",
+    "alineacion": "left",
+    "creado_en": "2026-01-01T00:00:00.000Z",
+    "actualizado_en": "2026-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Actualizar** (protegido, requiere cabecera `Authorization: Bearer <token>`):
+
+```bash
+curl -X PUT https://TU-PROYECTO.vercel.app/api/texto/mi-texto-1 \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"texto":"Nuevo texto actualizado","color":"#d946ef"}'
+```
+
+---
+
+## Estructura del proyecto
+
+```
+pluma/
+├─ app/
+│  ├─ api/
+│  │  ├─ login/route.ts          # POST /api/login (contraseña maestra → token)
+│  │  ├─ texto/route.ts          # POST /api/texto (crear)
+│  │  ├─ texto/[id]/route.ts     # GET/PUT/DELETE /api/texto/:id
+│  │  └─ textos/route.ts         # GET /api/textos (listar)
+│  ├─ demo/page.tsx              # página de demostración
+│  ├─ page.tsx                   # panel de administración
+│  ├─ layout.tsx                 # layout raíz + fuentes
+│  └─ globals.css                # estilos (morado/magenta/azul, bento, glow)
+├─ components/
+│  ├─ Spotlight.tsx              # resplandor que sigue al ratón
+│  ├─ LoginForm.tsx              # login con contraseña maestra
+│  ├─ WidgetList.tsx             # lista de widgets
+│  ├─ WidgetForm.tsx             # formulario + vista previa en vivo
+│  └─ EmbedCode.tsx              # snippet + botón "Copiar código embed"
+├─ lib/
+│  ├─ types.ts                   # modelo Widget
+│  ├─ auth.ts                    # token HMAC + verificación
+│  ├─ cors.ts                    # cabeceras CORS
+│  ├─ widgets.ts                 # validación y operaciones de negocio
+│  ├─ storage.ts                 # interfaz unificada (elige backend)
+│  ├─ postgres-storage.ts        # backend Vercel Postgres
+│  └─ kv-storage.ts              # backend Vercel KV/Redis
+├─ public/widget.js              # ⭐ widget estático (vanilla JS, sin deps)
+├─ db/schema.sql                 # esquema de la tabla "textos"
+├─ scripts/init-db.mjs           # npm run db:setup
+├─ .env.example                  # plantilla de variables de entorno
+└─ README.md
+```
+
+---
+
+## Seguridad
+
+- La edición/borrado requieren la contraseña maestra `ADMIN_PASSWORD` (nunca se sube al repo: vive solo en Vercel y en tu `.env.local`).
+- El login devuelve un token firmado con **HMAC-SHA256** y caducidad de 7 días; las rutas protegidas lo validan con comparación en tiempo constante.
+- El widget usa `textContent` (nunca `innerHTML`), por lo que el texto editado no puede inyectar HTML/scripts en webs de terceros.
+- El `GET /api/texto/:id` es público y con CORS abierto a propósito, para que el widget funcione desde cualquier dominio; las rutas de escritura **no** tienen CORS abierto y exigen token.
+
+---
+
+## Licencia
+
+MIT — úsalo libremente.
