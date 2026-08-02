@@ -31,33 +31,36 @@ export function WidgetList({ widgets, selectedId, loading, onSelect, onDelete, o
 
   return (
     <ul className="list">
-      {widgets.map((w) => (
-        <li key={w.id} className="widget-row">
-          <button
-            type="button"
-            className={`widget-item ${w.id === selectedId ? 'active' : ''}`}
-            onClick={() => onSelect(w)}
-          >
-            <span className="widget-dot" style={{ color: w.color }} />
-            <span className="widget-body">
-              <span className="widget-id">{w.id}</span>
-              <span className="widget-text">{w.texto || '(sin texto)'}</span>
-              <span className="widget-meta">
-                {w.font_size} · {w.alineacion}
+      {widgets.map((w) => {
+        const activo = w.items.find((i) => i.id === w.item_activo_id) ?? w.items[0] ?? null;
+        return (
+          <li key={w.id} className="widget-row">
+            <button
+              type="button"
+              className={`widget-item ${w.id === selectedId ? 'active' : ''}`}
+              onClick={() => onSelect(w)}
+            >
+              <span className="widget-dot" style={{ color: w.color }} />
+              <span className="widget-body">
+                <span className="widget-id">{w.id}</span>
+                <span className="widget-text">{activo?.contenido || '(sin textos)'}</span>
+                <span className="widget-meta">
+                  {w.items.length} {w.items.length === 1 ? 'texto' : 'textos'} · {w.font_size} · {w.alineacion}
+                </span>
               </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            title={`Eliminar ${w.id}`}
-            aria-label={`Eliminar ${w.id}`}
-            onClick={() => onDelete(w.id)}
-          >
-            🗑
-          </button>
-        </li>
-      ))}
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              title={`Eliminar ${w.id}`}
+              aria-label={`Eliminar ${w.id}`}
+              onClick={() => onDelete(w.id)}
+            >
+              🗑
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

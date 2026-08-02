@@ -1,6 +1,7 @@
 'use client';
 
 import type { Widget } from '@/lib/types';
+import { randomId } from '@/lib/utils';
 import { EmbedCode } from '@/components/EmbedCode';
 
 /** Tamaños de texto disponibles. */
@@ -44,10 +45,33 @@ interface Props {
   saving: boolean;
 }
 
-/** Formulario de creación/edición con vista previa en tiempo real. */
+/** Formulario de creación/edición con lista de textos y vista previa en vivo. */
 export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDelete, saving }: Props) {
   const safeColor = /^#[0-9a-fA-F]{6}$/.test(form.color) ? form.color : '#7c3aed';
   const canSave = editingId ? true : form.id.trim().length >= 2;
+
+  // Texto activo (el que se muestra en la web), o el primero si no hay ninguno marcado.
+  const activeItem = form.items.find((i) => i.id === form.item_activo_id) ?? form.items[0] ?? null;
+  const previewText = activeItem?.contenido || (form.items.length ? '(texto vacío)' : '(sin textos todavía)');
+
+  function addItem() {
+    const item = { id: randomId(), contenido: '' };
+    onChange({
+      items: [...form.items, item],
+      item_activo_id: form.item_activo_id ?? item.id,
+    });
+  }
+
+  function updateItem(id: string, contenido: string) {
+    onChange({ items: form.items.map((it) => (it.id === id ? { ...it, contenido } : it)) });
+  }
+
+  function removeItem(id: string) {
+    const items = form.items.filter((it) => it.id !== id);
+    const item_activo_id =
+      form.item_activo_id === id ? (items.length ? items[0].id : null) : form.item_activo_id;
+    onChange({ items, item_activo_id });
+  }
 
   return (
     <form
@@ -72,16 +96,52 @@ export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDele
       )}
 
       <div className="field">
-        <label className="label" htmlFor="widget-texto">Texto</label>
-        <textarea
-          id="widget-texto"
-          className="textarea"
-          rows={3}
-          placeholder="Escribe aquí el texto que se mostrará en la web…"
-          value={form.texto}
-          onChange={(e) => onChange({ texto: e.target.value })}
-          disabled={saving}
-        />
+        <span className="label">Textos del widget</span>
+        {form.items.length === 0 && (
+          <p className="hint" style={{ marginBottom: 8 }}>
+            Todavía no hay textos. Añade el primero con el botón de abajo.
+          </p>
+        )}
+        <div className="items-list">
+          {form.items.map((item, index) => (
+            <div key={item.id} className={`item-card ${form.item_activo_id === item.id ? 'active' : ''}`}>
+              <div className="item-head">
+                <span className="item-badge">Texto {index + 1}</span>
+                <button
+                  type="button"
+                  className={`item-active-btn ${form.item_activo_id === item.id ? 'active' : ''}`}
+                  title="Mostrar este texto en la web"
+                  onClick={() => onChange({ item_activo_id: item.id })}
+                  disabled={saving}
+                >
+                  <span aria-hidden="true">{form.item_activo_id === item.id ? '★' : '☆'}</span>
+                  {form.item_activo_id === item.id ? 'Visible en la web' : 'Mostrar'}
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title="Eliminar este texto"
+                  aria-label="Eliminar este texto"
+                  onClick={() => removeItem(item.id)}
+                  disabled={saving}
+                >
+                  🗑
+                </button>
+              </div>
+              <textarea
+                className="textarea"
+                rows={2}
+                placeholder="Contenido de este texto…"
+                value={item.contenido}
+                onChange={(e) => updateItem(item.id, e.target.value)}
+                disabled={saving}
+              />
+            </div>
+          ))}
+        </div>
+        <button type="button" className="btn-outline" onClick={addItem} disabled={saving}>
+          + Añadir texto
+        </button>
       </div>
 
       <div className="form-grid">
@@ -159,7 +219,7 @@ export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDele
       </div>
 
       <div className="preview-wrap">
-        <div className="preview-label">Vista previa (como se ve en la web del cliente)</div>
+        <div className="preview-label">Vista previa (lo que se ve en la web del cliente)</div>
         <div className="preview-shell">
           <div
             className="preview-widget"
@@ -170,7 +230,7 @@ export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDele
               textAlign: form.alineacion,
             }}
           >
-            {form.texto || 'Este es el texto de ejemplo…'}
+            {previewText}
           </div>
         </div>
       </div>

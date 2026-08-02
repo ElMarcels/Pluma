@@ -9,12 +9,23 @@ import { WidgetForm } from '@/components/WidgetForm';
 
 const EMPTY: Widget = {
   id: '',
-  texto: '',
+  items: [],
+  item_activo_id: null,
   color: '#7c3aed',
   font_size: '24px',
   fuente: 'sans-serif',
   alineacion: 'left',
 };
+
+/** Extrae el mensaje de error de una respuesta de la API. */
+function extractError(data: unknown, fallback: string): string {
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    if (typeof d.error === 'string') return d.error;
+    if (typeof d.message === 'string') return d.message;
+  }
+  return fallback;
+}
 
 export default function PanelPage() {
   const [token, setToken] = useState<string | null>(null);
@@ -59,8 +70,8 @@ export default function PanelPage() {
         logout();
         return;
       }
-      if (!res.ok) throw new Error('No se pudieron cargar los widgets.');
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(extractError(data, 'No se pudieron cargar los widgets.'));
       setWidgets(data.widgets || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar los widgets.');
@@ -177,7 +188,7 @@ export default function PanelPage() {
               <b className="gradient-text">{widgets.length}</b> widgets
             </div>
             <div className="stat">
-              <b>{widgets.filter((w) => w.texto).length}</b> con texto
+              <b>{widgets.filter((w) => w.items.some((i) => i.contenido.trim())).length}</b> con texto
             </div>
             <div className="stat">⚡ CORS abierto · vanilla JS</div>
           </div>

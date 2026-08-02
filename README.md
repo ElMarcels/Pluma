@@ -172,8 +172,13 @@ Desde el panel pulsa **Copiar código embed**. El snippet generado se ve así:
 <script src="https://TU-PROYECTO.vercel.app/widget.js"></script>
 ```
 
-El widget busca todos los `[data-widget-id]` de la página, consulta la API y pinta el texto
-con los estilos guardados. **No usa dependencias** y funciona en React, WordPress, HTML estático, etc.
+El widget busca todos los `[data-widget-id]` de la página, consulta la API y pinta el **texto
+activo** (el que esté marcado como "Visible en la web" en el panel) con los estilos guardados.
+**No usa dependencias** y funciona en React, WordPress, HTML estático, etc.
+
+> Un mismo widget puede contener una **lista de textos**. Desde el panel decides cuál se muestra
+> en la web marcándolo con ★; el resto queda guardado para alternar después sin tocar el código
+> del cliente.
 
 ### Atributos por elemento
 
@@ -210,14 +215,14 @@ window.PlumaWidgets.refresh();
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `GET` | `/api/texto/:id` | **Público** (CORS abierto) | Devuelve el texto y configuración del widget. Usado por `widget.js`. |
+| `GET` | `/api/texto/:id` | **Público** (CORS abierto) | Devuelve el texto activo y configuración del widget. Usado por `widget.js`. |
 | `POST` | `/api/texto` | Protegido | Crea un widget nuevo. |
-| `PUT` | `/api/texto/:id` | Protegido | Actualiza el texto/configuración. |
+| `PUT` | `/api/texto/:id` | Protegido | Actualiza la lista de textos/configuración. |
 | `DELETE` | `/api/texto/:id` | Protegido | Elimina el widget. |
 | `GET` | `/api/textos` | Protegido | Lista todos los widgets (para el panel). |
 | `POST` | `/api/login` | Público | Login con contraseña maestra → devuelve token `Bearer`. |
 
-**Respuesta de ejemplo** (`GET /api/texto/mi-texto-1`):
+**Respuesta de ejemplo** (`GET /api/texto/mi-texto-1`) — devuelve la vista pública con el texto activo:
 
 ```json
 {
@@ -235,13 +240,23 @@ window.PlumaWidgets.refresh();
 }
 ```
 
-**Actualizar** (protegido, requiere cabecera `Authorization: Bearer <token>`):
+**Actualizar** (protegido, requiere cabecera `Authorization: Bearer <token>`).
+El body puede ser una actualización parcial del widget. Los campos opcionales del widget son:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `items` | `{id, contenido}[]` | Lista completa de textos del widget. |
+| `item_activo_id` | `string \| null` | Texto visible en la web (`null` = el primero). |
+| `color` | `string` | Color del texto (hex). |
+| `font_size` | `string` | Tamaño (ej. `24px`). |
+| `fuente` | `string` | Fuente CSS. |
+| `alineacion` | `string` | `left`, `center`, `right`, `justify`. |
 
 ```bash
 curl -X PUT https://TU-PROYECTO.vercel.app/api/texto/mi-texto-1 \
   -H "Authorization: Bearer TU_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"texto":"Nuevo texto actualizado","color":"#d946ef"}'
+  -d '{"items":[{"id":"a","contenido":"Hola"},{"id":"b","contenido":"Adiós"}],"item_activo_id":"a"}'
 ```
 
 ---
@@ -267,12 +282,13 @@ pluma/
 │  ├─ WidgetForm.tsx             # formulario + vista previa en vivo
 │  └─ EmbedCode.tsx              # snippet + botón "Copiar código embed"
 ├─ lib/
-│  ├─ types.ts                   # modelo Widget
+│  ├─ types.ts                   # modelo Widget (lista de textos + configuración)
+│  ├─ utils.ts                   # helpers (randomId, sanitización de ID)
 │  ├─ auth.ts                    # token HMAC + verificación
 │  ├─ cors.ts                    # cabeceras CORS
 │  ├─ widgets.ts                 # validación y operaciones de negocio
 │  ├─ storage.ts                 # interfaz unificada (elige backend)
-│  ├─ postgres-storage.ts        # backend Vercel Postgres
+│  ├─ postgres-storage.ts        # backend Vercel Postgres (auto-crea la tabla)
 │  └─ kv-storage.ts              # backend Vercel KV/Redis
 ├─ public/widget.js              # ⭐ widget estático (vanilla JS, sin deps)
 ├─ db/schema.sql                 # esquema de la tabla "textos"

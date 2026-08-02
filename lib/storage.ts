@@ -26,3 +26,13 @@ export function getStorage(): Storage {
   }
   return kvStorage;
 }
+
+/** true si hay variables de Vercel KV / Redis configuradas. */
+export function hasKvEnv(): boolean {
+  return Boolean(process.env.KV_URL || process.env.KV_REST_API_URL);
+}
+
+/** true si hay alguna base de datos configurada (Postgres/Neon o KV). */
+export function hasAnyDbEnv(): boolean {
+  return hasPostgresEnv() || hasKvEnv();
+}
