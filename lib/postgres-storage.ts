@@ -4,9 +4,37 @@
 // (ver db/schema.sql y "npm run db:setup").
 // =============================================================
 
-import { sql } from '@vercel/postgres';
+import { createPool } from '@vercel/postgres';
 import type { Storage } from '@/lib/storage';
 import type { Widget } from '@/lib/types';
+
+/**
+ * Devuelve la cadena de conexión a Postgres/Neon según las variables
+ * de entorno presentes. Soporta tanto el legado "Vercel Postgres"
+ * (POSTGRES_URL) como la integración de Neon en Vercel (DATABASE_URL),
+ * porque Vercel vincula automáticamente unas u otras.
+ */
+export function getPostgresConnectionString(): string | undefined {
+  return (
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_CONNECTION_STRING ||
+    process.env.DATABASE_URL ||
+    process.env.NEON_DATABASE_URL ||
+    process.env.POSTGRESQL_URL ||
+    undefined
+  );
+}
+
+/** true si alguna variable de Postgres/Neon está configurada. */
+export function hasPostgresEnv(): boolean {
+  return Boolean(getPostgresConnectionString());
+}
+
+// Pool reutilizable. Si no hay cadena explícita, el SDK lee las
+// variables estándar de Neon/Postgres (PGHOST, PGUSER, etc.).
+const connectionString = getPostgresConnectionString();
+const sql = createPool(connectionString ? { connectionString } : {});
 
 /** Fila tal y como la devuelve Postgres. */
 interface Row {

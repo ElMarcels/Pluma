@@ -69,8 +69,10 @@ cp .env.example .env.local
 Edita `.env.local` y configura la base de datos (elige **una** opción):
 
 ```dotenv
-# Opción A: Vercel Postgres
+# Opción A: Postgres / Neon (recomendada)
+# Cualquiera de estas variables sirve; el código las detecta todas:
 POSTGRES_URL="postgres://..."
+DATABASE_URL="postgresql://..."
 
 # Opción B: Vercel KV / Redis
 KV_URL="redis://..."
@@ -84,10 +86,10 @@ ADMIN_PASSWORD="tu-contrasena-segura"
 
 ### Crear la base de datos
 
-**Opción A — Vercel Postgres (recomendada):**
+**Opción A — Postgres / Neon (recomendada):**
 
-1. En el dashboard de Vercel abre tu proyecto → **Storage** → **Create Database** → **Postgres**.
-2. Copia los valores de conexión en `.env.local` (`POSTGRES_URL`).
+1. En el dashboard de Vercel abre tu proyecto → **Storage** → **Create Database** → elige **Neon** (Postgres). Vercel enlaza automáticamente las variables de conexión al proyecto (normalmente `DATABASE_URL`).
+2. Si quieres usar Vercel Postgres clásico, se enlaza `POSTGRES_URL`. **El código acepta ambas** (`POSTGRES_URL`, `DATABASE_URL`, `NEON_DATABASE_URL`, etc.).
 3. Crea la tabla ejecutando:
 
 ```bash
@@ -129,9 +131,10 @@ git push -u origin main
 
 2. Ve a [vercel.com/new](https://vercel.com/new), elige **Import** tu repositorio de GitHub.
 3. Vercel detecta Next.js automáticamente (build: `npm run build`).
-4. Añade las variables de entorno en **Settings → Environment Variables** (las mismas que en `.env.local`): `POSTGRES_URL` (o `KV_URL` + tokens REST) y `ADMIN_PASSWORD`.
-5. **Deploy.** Cada `git push` a `main` generará un deploy automático.
-6. Crea la tabla en Postgres de producción (si usas Postgres):
+4. Crea la base de datos desde el propio Vercel: **Storage → Create Database → Neon (Postgres)**. Vercel enlaza automáticamente las variables de conexión al proyecto.
+5. Añade **solo** la contraseña maestra en **Settings → Environment Variables**: `ADMIN_PASSWORD`.
+6. **Deploy.** Cada `git push` a `main` generará un deploy automático.
+7. Crea la tabla en Postgres de producción (si usas Postgres/Neon):
 
 ```bash
 npm run db:setup
@@ -145,12 +148,18 @@ npm run db:setup
 
 | Variable | Obligatoria | Descripción |
 |---|---|---|
-| `POSTGRES_URL` | Con Postgres | Cadena de conexión de Vercel Postgres. Si está presente, se usa Postgres. |
-| `KV_URL` | Con KV | URL de Vercel KV / Redis. Se usa si no hay `POSTGRES_URL`. |
+| `POSTGRES_URL` | Con Postgres | Cadena de conexión (Vercel Postgres clásico). |
+| `DATABASE_URL` | Con Neon | Cadena de conexión que enlaza la integración de Neon en Vercel. |
+| `NEON_DATABASE_URL` | Con Neon | Alias alternativo de conexión Neon. |
+| `KV_URL` | Con KV | URL de Vercel KV / Redis. Se usa si no hay variable de Postgres. |
 | `KV_REST_API_URL` | Con KV | Endpoint REST (requerido por @vercel/kv en runtime). |
 | `KV_REST_API_TOKEN` | Con KV | Token de escritura del almacén. |
 | `KV_REST_API_READ_ONLY_TOKEN` | Con KV | Token de solo lectura. |
 | `ADMIN_PASSWORD` | Sí | Contraseña maestra para editar/borrar widgets. Alias aceptado: `PASSWORD_MAESTRA`. |
+
+> El código detecta automáticamente cualquier variable de Postgres/Neon (`POSTGRES_URL`,
+> `POSTGRES_URL_NON_POOLING`, `POSTGRES_CONNECTION_STRING`, `DATABASE_URL`,
+> `NEON_DATABASE_URL`, `POSTGRESQL_URL`) y usa KV solo cuando no hay ninguna.
 
 ---
 

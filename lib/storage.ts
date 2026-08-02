@@ -7,7 +7,7 @@
 // =============================================================
 
 import type { Widget } from '@/lib/types';
-import { postgresStorage } from '@/lib/postgres-storage';
+import { postgresStorage, hasPostgresEnv } from '@/lib/postgres-storage';
 import { kvStorage } from '@/lib/kv-storage';
 
 /** Operaciones que debe implementar cualquier backend. */
@@ -21,7 +21,7 @@ export interface Storage {
 
 /** Elige el backend según las variables de entorno configuradas. */
 export function getStorage(): Storage {
-  if (process.env.POSTGRES_URL) {
+  if (hasPostgresEnv()) {
     return postgresStorage;
   }
   return kvStorage;
