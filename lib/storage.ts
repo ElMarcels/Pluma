@@ -36,3 +36,30 @@ export function hasKvEnv(): boolean {
 export function hasAnyDbEnv(): boolean {
   return hasPostgresEnv() || hasKvEnv();
 }
+
+const DB_VAR_NAMES = [
+  'DATABASE_URL',
+  'DATABASE_URL_UNPOOLED',
+  'POSTGRES_URL',
+  'POSTGRES_URL_UNPOOLED',
+  'POSTGRES_URL_NON_POOLING',
+  'POSTGRES_CONNECTION_STRING',
+  'NEON_DATABASE_URL',
+  'POSTGRESQL_URL',
+  'PGHOST',
+  'POSTGRES_HOST',
+  'KV_URL',
+  'KV_REST_API_URL',
+];
+
+/**
+ * Mensaje de error cuando el despliegue actual no tiene base de datos.
+ * Ayuda a diagnosticar: lista las variables que sí están presentes.
+ */
+export function dbMissingMessage(): string {
+  const found = DB_VAR_NAMES.filter((name) => process.env[name]);
+  if (found.length) {
+    return `No hay una base de datos configurada correctamente en este despliegue. Se detectaron las variables: ${found.join(', ')}. Revisa que la cadena de conexión esté completa y vuelve a desplegar.`;
+  }
+  return 'No hay base de datos configurada en este despliegue. Añade DATABASE_URL (Neon) o KV_URL en Settings → Environment Variables de Vercel y haz un nuevo Deploy: los despliegues anteriores no reciben variables nuevas automáticamente.';
+}

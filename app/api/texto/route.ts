@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { jsonResponse, corsOptionsResponse } from '@/lib/cors';
 import { requireAuth } from '@/lib/auth';
 import { createWidget } from '@/lib/widgets';
-import { hasAnyDbEnv } from '@/lib/storage';
+import { hasAnyDbEnv, dbMissingMessage } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,10 +18,7 @@ export async function POST(req: NextRequest) {
   if (denied) return denied;
 
   if (!hasAnyDbEnv()) {
-    return jsonResponse(
-      { error: 'No hay base de datos configurada. Añade DATABASE_URL (Neon) o KV_URL en las variables de entorno de Vercel.' },
-      500
-    );
+    return jsonResponse({ error: dbMissingMessage() }, 500);
   }
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;

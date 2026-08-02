@@ -1,31 +1,49 @@
 // =============================================================
 // Backend de almacenamiento con Vercel Postgres / Neon.
-// Detecta automáticamente la variable de conexión configurada
-// (POSTGRES_URL o DATABASE_URL, entre otras). La tabla "textos"
-// se crea automáticamente en el primer uso (no hace falta correr
-// db:setup manualmente, aunque también está disponible).
+// Detecta automáticamente la variable de conexión configurada:
+// cadena completa (POSTGRES_URL, DATABASE_URL, etc.) o piezas
+// sueltas (PGHOST/PGUSER/PGDATABASE/PGPASSWORD que inyecta Neon).
+// La tabla "textos" se crea automáticamente en el primer uso (no
+// hace falta correr db:setup manualmente, aunque está disponible).
 // =============================================================
 
 import { createPool } from '@vercel/postgres';
 import type { Storage } from '@/lib/storage';
 import type { TextoItem, Widget } from '@/lib/types';
 
+/** Lee una variable de entorno por su nombre (siempre en runtime). */
+const env = (name: string): string | undefined => process.env[name];
+
 /**
  * Devuelve la cadena de conexión a Postgres/Neon según las variables
- * de entorno presentes. Soporta tanto el legado "Vercel Postgres"
- * (POSTGRES_URL) como la integración de Neon en Vercel (DATABASE_URL),
- * porque Vercel vincula automáticamente unas u otras.
+ * de entorno presentes. Soporta:
+ *   - Cadenas completas: Vercel Postgres (POSTGRES_URL) y la
+ *     integración de Neon en Vercel (DATABASE_URL).
+ *   - Piezas sueltas (PG* de Neon / POSTGRES_* de Vercel Postgres),
+ *     con las que se construye la URL si no hay cadena completa.
  */
 export function getPostgresConnectionString(): string | undefined {
-  return (
-    process.env.POSTGRES_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    process.env.POSTGRES_CONNECTION_STRING ||
-    process.env.DATABASE_URL ||
-    process.env.NEON_DATABASE_URL ||
-    process.env.POSTGRESQL_URL ||
-    undefined
-  );
+  const direct =
+    env('POSTGRES_URL') ||
+    env('POSTGRES_URL_UNPOOLED') ||
+    env('POSTGRES_URL_NON_POOLING') ||
+    env('POSTGRES_CONNECTION_STRING') ||
+    env('DATABASE_URL') ||
+    env('DATABASE_URL_UNPOOLED') ||
+    env('NEON_DATABASE_URL') ||
+    env('POSTGRESQL_URL');
+  if (direct) return direct;
+
+  const host = env('PGHOST') || env('POSTGRES_HOST');
+  const user = env('PGUSER') || env('POSTGRES_USER');
+  const password = env('PGPASSWORD') || env('POSTGRES_PASSWORD');
+  const database = env('PGDATABASE') || env('POSTGRES_DATABASE');
+  if (host && user && password && database) {
+    const port = env('PGPORT') || env('POSTGRES_PORT') || '5432';
+    return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}?sslmode=require`;
+  }
+
+  return undefined;
 }
 
 /** true si alguna variable de Postgres/Neon está configurada. */

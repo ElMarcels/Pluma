@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 import { jsonResponse, corsOptionsResponse } from '@/lib/cors';
 import { requireAuth } from '@/lib/auth';
 import { getPublicWidget, updateWidget, deleteWidget } from '@/lib/widgets';
-import { hasAnyDbEnv } from '@/lib/storage';
+import { hasAnyDbEnv, dbMissingMessage } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ function errorMessage(err: unknown): string {
 export async function GET(_req: NextRequest, { params }: RouteContext) {
   if (!hasAnyDbEnv()) {
     return jsonResponse(
-      { error: 'No hay base de datos configurada. Añade DATABASE_URL (Neon) o KV_URL en las variables de entorno de Vercel.' },
+      { error: dbMissingMessage() },
       500
     );
   }
@@ -50,7 +50,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
   if (!hasAnyDbEnv()) {
     return jsonResponse(
-      { error: 'No hay base de datos configurada. Añade DATABASE_URL (Neon) o KV_URL en las variables de entorno de Vercel.' },
+      { error: dbMissingMessage() },
       500
     );
   }
@@ -79,7 +79,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
 
   if (!hasAnyDbEnv()) {
     return jsonResponse(
-      { error: 'No hay base de datos configurada. Añade DATABASE_URL (Neon) o KV_URL en las variables de entorno de Vercel.' },
+      { error: dbMissingMessage() },
       500
     );
   }
