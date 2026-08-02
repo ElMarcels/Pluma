@@ -10,9 +10,7 @@
 import { createPool } from '@vercel/postgres';
 import type { Storage } from '@/lib/storage';
 import type { TextoItem, Widget } from '@/lib/types';
-
-/** Lee una variable de entorno por su nombre (siempre en runtime). */
-const env = (name: string): string | undefined => process.env[name];
+import { envVar } from '@/lib/utils';
 
 /**
  * Devuelve la cadena de conexión a Postgres/Neon según las variables
@@ -24,22 +22,22 @@ const env = (name: string): string | undefined => process.env[name];
  */
 export function getPostgresConnectionString(): string | undefined {
   const direct =
-    env('POSTGRES_URL') ||
-    env('POSTGRES_URL_UNPOOLED') ||
-    env('POSTGRES_URL_NON_POOLING') ||
-    env('POSTGRES_CONNECTION_STRING') ||
-    env('DATABASE_URL') ||
-    env('DATABASE_URL_UNPOOLED') ||
-    env('NEON_DATABASE_URL') ||
-    env('POSTGRESQL_URL');
+    envVar('POSTGRES_URL') ||
+    envVar('POSTGRES_URL_UNPOOLED') ||
+    envVar('POSTGRES_URL_NON_POOLING') ||
+    envVar('POSTGRES_CONNECTION_STRING') ||
+    envVar('DATABASE_URL') ||
+    envVar('DATABASE_URL_UNPOOLED') ||
+    envVar('NEON_DATABASE_URL') ||
+    envVar('POSTGRESQL_URL');
   if (direct) return direct;
 
-  const host = env('PGHOST') || env('POSTGRES_HOST');
-  const user = env('PGUSER') || env('POSTGRES_USER');
-  const password = env('PGPASSWORD') || env('POSTGRES_PASSWORD');
-  const database = env('PGDATABASE') || env('POSTGRES_DATABASE');
+  const host = envVar('PGHOST') || envVar('POSTGRES_HOST');
+  const user = envVar('PGUSER') || envVar('POSTGRES_USER');
+  const password = envVar('PGPASSWORD') || envVar('POSTGRES_PASSWORD');
+  const database = envVar('PGDATABASE') || envVar('POSTGRES_DATABASE');
   if (host && user && password && database) {
-    const port = env('PGPORT') || env('POSTGRES_PORT') || '5432';
+    const port = envVar('PGPORT') || envVar('POSTGRES_PORT') || '5432';
     return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}?sslmode=require`;
   }
 

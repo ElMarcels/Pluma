@@ -159,7 +159,11 @@ npm run db:setup
 
 > El código detecta automáticamente cualquier variable de Postgres/Neon (`POSTGRES_URL`,
 > `POSTGRES_URL_NON_POOLING`, `POSTGRES_CONNECTION_STRING`, `DATABASE_URL`,
-> `NEON_DATABASE_URL`, `POSTGRESQL_URL`) y usa KV solo cuando no hay ninguna.
+> `DATABASE_URL_UNPOOLED`, `NEON_DATABASE_URL`, `POSTGRESQL_URL`) y también las piezas
+> sueltas (`PGHOST`/`PGUSER`/`PGDATABASE`/`PGPASSWORD`/`PGPORT`, con las que construye la
+> URL), o `POSTGRES_HOST`/`POSTGRES_USER`… de Vercel Postgres. Usa KV solo cuando no hay
+> ninguna de Postgres. Todas ellas se aceptan también con el prefijo `PLUMA_`
+> (ej. `PLUMA_DATABASE_URL`), por si aplicaste un prefijo en Vercel.
 
 ---
 

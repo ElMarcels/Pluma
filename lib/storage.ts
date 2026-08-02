@@ -9,6 +9,7 @@
 import type { Widget } from '@/lib/types';
 import { postgresStorage, hasPostgresEnv } from '@/lib/postgres-storage';
 import { kvStorage } from '@/lib/kv-storage';
+import { envVar } from '@/lib/utils';
 
 /** Operaciones que debe implementar cualquier backend. */
 export interface Storage {
@@ -29,7 +30,7 @@ export function getStorage(): Storage {
 
 /** true si hay variables de Vercel KV / Redis configuradas. */
 export function hasKvEnv(): boolean {
-  return Boolean(process.env.KV_URL || process.env.KV_REST_API_URL);
+  return Boolean(envVar('KV_URL') || envVar('KV_REST_API_URL'));
 }
 
 /** true si hay alguna base de datos configurada (Postgres/Neon o KV). */
@@ -57,7 +58,7 @@ const DB_VAR_NAMES = [
  * Ayuda a diagnosticar: lista las variables que sí están presentes.
  */
 export function dbMissingMessage(): string {
-  const found = DB_VAR_NAMES.filter((name) => process.env[name]);
+  const found = DB_VAR_NAMES.filter((name) => envVar(name));
   if (found.length) {
     return `No hay una base de datos configurada correctamente en este despliegue. Se detectaron las variables: ${found.join(', ')}. Revisa que la cadena de conexión esté completa y vuelve a desplegar.`;
   }

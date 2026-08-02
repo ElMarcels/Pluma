@@ -10,3 +10,14 @@ export function randomId(): string {
   }
   return Math.random().toString(36).slice(2, 12);
 }
+
+/**
+ * Lee una variable de entorno soportando el prefijo `PLUMA_`.
+ * Si en Vercel añadiste las variables con prefijo (ej. en lugar de
+ * DATABASE_URL tienes PLUMA_DATABASE_URL), se detectan igual.
+ * Solo se usa en el servidor.
+ */
+export function envVar(name: string): string | undefined {
+  if (typeof process === 'undefined') return undefined;
+  return process.env[name] ?? process.env[`PLUMA_${name}`];
+}
