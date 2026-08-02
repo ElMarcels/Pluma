@@ -1,7 +1,8 @@
 // =============================================================
-// Backend de almacenamiento con Vercel Postgres.
-// Requiere la variable de entorno POSTGRES_URL y la tabla "textos"
-// (ver db/schema.sql y "npm run db:setup").
+// Backend de almacenamiento con Vercel Postgres / Neon.
+// Detecta automáticamente la variable de conexión configurada
+// (POSTGRES_URL o DATABASE_URL, entre otras) y crea la tabla
+// "textos" (ver db/schema.sql y "npm run db:setup").
 // =============================================================
 
 import { createPool } from '@vercel/postgres';
@@ -31,10 +32,32 @@ export function hasPostgresEnv(): boolean {
   return Boolean(getPostgresConnectionString());
 }
 
-// Pool reutilizable. Si no hay cadena explícita, el SDK lee las
-// variables estándar de Neon/Postgres (PGHOST, PGUSER, etc.).
-const connectionString = getPostgresConnectionString();
-const sql = createPool(connectionString ? { connectionString } : {});
+// -------------------------------------------------------------
+// Pool perezoso.
+// No se crea al importar el módulo (evita fallar si las variables
+// aún no existen), sino la primera vez que se ejecuta una consulta.
+// -------------------------------------------------------------
+
+type SqlTag = <O extends { [key: string]: unknown }>(
+  strings: TemplateStringsArray,
+  ...values: (string | number | boolean | undefined | null)[]
+) => Promise<{ rows: O[] }>;
+
+let sqlTag: SqlTag | null = null;
+
+function buildSqlTag(): SqlTag {
+  const connectionString = getPostgresConnectionString();
+  // createPool devuelve un VercelPool que NO es invocable; su método
+  // `.sql` es el template tag. Lo enlazamos para poder usarlo igual
+  // que el export `sql` por defecto de @vercel/postgres.
+  const pool = createPool(connectionString ? { connectionString } : {});
+  return pool.sql.bind(pool) as SqlTag;
+}
+
+function getSql(): SqlTag {
+  if (!sqlTag) sqlTag = buildSqlTag();
+  return sqlTag;
+}
 
 /** Fila tal y como la devuelve Postgres. */
 interface Row {
@@ -63,17 +86,17 @@ function mapRow(row: Row): Widget {
 }
 
 async function get(id: string): Promise<Widget | null> {
-  const { rows } = await sql`SELECT * FROM textos WHERE id = ${id} LIMIT 1`;
+  const { rows } = await getSql()`SELECT * FROM textos WHERE id = ${id} LIMIT 1`;
   return rows.length ? mapRow(rows[0] as Row) : null;
 }
 
 async function list(): Promise<Widget[]> {
-  const { rows } = await sql`SELECT * FROM textos ORDER BY actualizado_en DESC`;
+  const { rows } = await getSql()`SELECT * FROM textos ORDER BY actualizado_en DESC`;
   return (rows as Row[]).map(mapRow);
 }
 
 async function create(widget: Widget): Promise<Widget> {
-  await sql`
+  await getSql()`
     INSERT INTO textos (id, texto, color, font_size, fuente, alineacion, creado_en, actualizado_en)
     VALUES (
       ${widget.id},
@@ -93,7 +116,7 @@ async function update(id: string, patch: Partial<Widget>): Promise<Widget | null
   const current = await get(id);
   if (!current) return null;
   const next: Widget = { ...current, ...patch, actualizado_en: new Date().toISOString() };
-  await sql`
+  await getSql()`
     UPDATE textos
     SET texto = ${next.texto},
         color = ${next.color},
@@ -107,7 +130,7 @@ async function update(id: string, patch: Partial<Widget>): Promise<Widget | null
 }
 
 async function remove(id: string): Promise<boolean> {
-  await sql`DELETE FROM textos WHERE id = ${id}`;
+  await getSql()`DELETE FROM textos WHERE id = ${id}`;
   return true;
 }
 
