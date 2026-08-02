@@ -130,7 +130,11 @@
         if (token.code) { next.push(token); return; }
         token.text.split(marker).forEach(function (part, i) {
           if (!part) return;
-          var copy = { text: part };
+          var copy = {};
+          for (var key in token) {
+            if (Object.prototype.hasOwnProperty.call(token, key)) copy[key] = token[key];
+          }
+          copy.text = part;
           copy[prop] = i % 2 === 1;
           next.push(copy);
         });
