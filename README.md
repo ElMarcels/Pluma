@@ -184,6 +184,26 @@ activo** (el que esté marcado como "Visible en la web" en el panel) con los est
 > en la web marcándolo con ★; el resto queda guardado para alternar después sin tocar el código
 > del cliente.
 
+### Formato del texto (markdown en línea)
+
+El contenido de cada texto soporta un subconjunto de markdown seguro (se renderiza creando
+nodos DOM, nunca `innerHTML`). Desde el panel puedes usar la barra de herramientas o escribir
+la sintaxis a mano:
+
+| Escribes | Resultado |
+|---|---|
+| `**negrita**` | **negrita** |
+| `*cursiva*` | *cursiva* |
+| `__subrayado__` | subrayado |
+| `~~tachado~~` | ~~tachado~~ |
+| `` `código` `` | `código` |
+| `[texto]{fuente:Georgia;tamaño:28px;color:#d946ef}` | *texto* con fuente/tamaño/color propios |
+| `\*literal\*` | Muestra los caracteres especiales tal cual |
+
+En el estilo de fragmento las propiedades son opcionales y se separan con `;`
+(`fuente`, `tamaño` y `color`). El estilo del widget (color/fuente/tamaño) sigue aplicándose
+como base y el fragmento lo sobrescribe.
+
 ### Atributos por elemento
 
 | Atributo | Descripción |
@@ -307,7 +327,7 @@ pluma/
 
 - La edición/borrado requieren la contraseña maestra `ADMIN_PASSWORD` (nunca se sube al repo: vive solo en Vercel y en tu `.env.local`).
 - El login devuelve un token firmado con **HMAC-SHA256** y caducidad de 7 días; las rutas protegidas lo validan con comparación en tiempo constante.
-- El widget usa `textContent` (nunca `innerHTML`), por lo que el texto editado no puede inyectar HTML/scripts en webs de terceros.
+- El widget pinta el texto creando **nodos DOM** (nunca `innerHTML`) a partir de un parser markdown de lista blanca: el contenido solo puede producir texto y estilos CSS (negrita, cursiva, colores…), por lo que es imposible inyectar HTML/scripts en webs de terceros.
 - El `GET /api/texto/:id` es público y con CORS abierto a propósito, para que el widget funcione desde cualquier dominio; las rutas de escritura **no** tienen CORS abierto y exigen token.
 
 ---

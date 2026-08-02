@@ -3,6 +3,8 @@
 import type { Widget } from '@/lib/types';
 import { randomId } from '@/lib/utils';
 import { EmbedCode } from '@/components/EmbedCode';
+import { ItemEditor } from '@/components/ItemEditor';
+import { MarkdownPreview } from '@/components/MarkdownPreview';
 
 /** Tamaños de texto disponibles. */
 const SIZES = ['14px', '16px', '18px', '20px', '22px', '24px', '28px', '32px', '36px', '40px', '48px', '56px', '64px'];
@@ -62,10 +64,6 @@ export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDele
     });
   }
 
-  function updateItem(id: string, contenido: string) {
-    onChange({ items: form.items.map((it) => (it.id === id ? { ...it, contenido } : it)) });
-  }
-
   function removeItem(id: string) {
     const items = form.items.filter((it) => it.id !== id);
     const item_activo_id =
@@ -104,39 +102,18 @@ export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDele
         )}
         <div className="items-list">
           {form.items.map((item, index) => (
-            <div key={item.id} className={`item-card ${form.item_activo_id === item.id ? 'active' : ''}`}>
-              <div className="item-head">
-                <span className="item-badge">Texto {index + 1}</span>
-                <button
-                  type="button"
-                  className={`item-active-btn ${form.item_activo_id === item.id ? 'active' : ''}`}
-                  title="Mostrar este texto en la web"
-                  onClick={() => onChange({ item_activo_id: item.id })}
-                  disabled={saving}
-                >
-                  <span aria-hidden="true">{form.item_activo_id === item.id ? '★' : '☆'}</span>
-                  {form.item_activo_id === item.id ? 'Visible en la web' : 'Mostrar'}
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  title="Eliminar este texto"
-                  aria-label="Eliminar este texto"
-                  onClick={() => removeItem(item.id)}
-                  disabled={saving}
-                >
-                  🗑
-                </button>
-              </div>
-              <textarea
-                className="textarea"
-                rows={2}
-                placeholder="Contenido de este texto…"
-                value={item.contenido}
-                onChange={(e) => updateItem(item.id, e.target.value)}
-                disabled={saving}
-              />
-            </div>
+            <ItemEditor
+              key={item.id}
+              item={item}
+              index={index}
+              isActive={form.item_activo_id === item.id}
+              saving={saving}
+              onChange={(id, contenido) =>
+                onChange({ items: form.items.map((it) => (it.id === id ? { ...it, contenido } : it)) })
+              }
+              onSetActive={() => onChange({ item_activo_id: item.id })}
+              onRemove={() => removeItem(item.id)}
+            />
           ))}
         </div>
         <button type="button" className="btn-outline" onClick={addItem} disabled={saving}>
@@ -230,7 +207,7 @@ export function WidgetForm({ form, editingId, onChange, onSave, onCancel, onDele
               textAlign: form.alineacion,
             }}
           >
-            {previewText}
+            <MarkdownPreview text={previewText} />
           </div>
         </div>
       </div>
