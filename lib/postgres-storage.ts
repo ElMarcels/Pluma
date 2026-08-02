@@ -38,10 +38,10 @@ export function hasPostgresEnv(): boolean {
 // aún no existen), sino la primera vez que se ejecuta una consulta.
 // -------------------------------------------------------------
 
-type SqlTag = <O extends { [key: string]: unknown }>(
+type SqlTag = (
   strings: TemplateStringsArray,
   ...values: (string | number | boolean | undefined | null)[]
-) => Promise<{ rows: O[] }>;
+) => Promise<{ rows: any[] }>;
 
 let sqlTag: SqlTag | null = null;
 
